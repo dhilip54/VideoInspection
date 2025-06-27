@@ -1,0 +1,144 @@
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: linear-gradient(135deg, #e3e9f7 0%, #f7fafd 100%);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+.app-container, .room-container {
+  max-width: 540px;
+  margin: 48px auto;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10), 0 1.5px 4px rgba(0,0,0,0.03);
+  padding: 40px 32px 32px 32px;
+  text-align: center;
+  transition: box-shadow 0.2s;
+}
+.app-container:hover, .room-container:hover {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.05);
+}
+button {
+  margin: 10px 8px;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #0078d4 60%, #005fa3 100%);
+  color: #fff;
+  cursor: pointer;
+  font-size: 17px;
+  font-weight: 500;
+  box-shadow: 0 1px 4px #0001;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+}
+button:hover:not(:disabled) {
+  background: linear-gradient(90deg, #005fa3 60%, #0078d4 100%);
+  box-shadow: 0 2px 8px #0002;
+  transform: translateY(-2px) scale(1.03);
+}
+button:disabled {
+  background: #b0b8c1;
+  color: #f3f3f3;
+  cursor: not-allowed;
+}
+input[type="text"], input[type="password"], input[type="email"] {
+  padding: 10px 12px;
+  margin: 10px 0 18px 0;
+  border-radius: 6px;
+  border: 1.5px solid #d0d7e2;
+  font-size: 16px;
+  width: 90%;
+  max-width: 340px;
+  background: #f7fafd;
+  transition: border 0.2s;
+}
+input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus {
+  border: 1.5px solid #0078d4;
+  outline: none;
+  background: #fff;
+}
+.error {
+  color: #e53935;
+  margin-top: 18px;
+  font-weight: 500;
+  font-size: 16px;
+}
+h2, h3 {
+  font-weight: 700;
+  color: #1a2a3a;
+  margin-bottom: 24px;
+  letter-spacing: 0.5px;
+}
+.room-container video, .room-container .participantVideo {
+  border-radius: 10px;
+  box-shadow: 0 2px 8px #0001;
+  background: #000;
+}
+.room-container .participantTile, .room-container .participant-tile {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px #0001;
+  padding: 18px 8px 12px 8px;
+  margin: 8px;
+  min-width: 120px;
+  max-width: 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: box-shadow 0.18s, transform 0.12s;
+}
+.room-container .participantTile:hover, .room-container .participant-tile:hover {
+  box-shadow: 0 6px 24px #0002;
+  transform: translateY(-2px) scale(1.03);
+}
+.room-container .avatar, .room-container .avatarPlaceholder {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  margin-bottom: 10px;
+  background: #bbb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: #fff;
+}
+.room-container .participantName {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a2a3a;
+  margin-bottom: 2px;
+  text-align: center;
+}
+.room-container .participantStatus {
+  font-size: 12px;
+  color: #4caf50;
+  text-align: center;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  background: #e3e9f7;
+}
+::-webkit-scrollbar-thumb {
+  background: #c7d0e0;
+  border-radius: 4px;
+}
+@media (max-width: 700px) {
+  .app-container, .room-container {
+    max-width: 98vw;
+    padding: 10px 2vw 10px 2vw;
+  }
+  .room-container .participantTile, .room-container .participant-tile {
+    min-width: 90px;
+    max-width: 120px;
+    padding: 10px 2px 8px 2px;
+  }
+  button {
+    width: 100%;
+    margin: 8px 0;
+  }
+  input[type="text"], input[type="password"], input[type="email"] {
+    width: 100%;
+    max-width: 100%;
+  }
+}
