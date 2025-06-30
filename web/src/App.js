@@ -7,7 +7,7 @@ function App() {
   const [roomId, setRoomId] = useState('');
 
   const handleCreate = async () => {
-    const res = await fetch('http://localhost:5000/create-room', { method: 'POST' });
+    const res = await fetch('http://18.204.144.126:8084/create-room', { method: 'POST' });
     const data = await res.json();
     setRoomId(data.roomId);
     setScreen('room');
@@ -15,7 +15,7 @@ function App() {
 
   const handleJoin = async () => {
     if (!roomId) return;
-    const res = await fetch('http://localhost:5000/validate-room', {
+    const res = await fetch('http://18.204.144.126:8084/validate-room', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ roomId })
