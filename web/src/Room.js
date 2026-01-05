@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
 import html2canvas from 'html2canvas';
 
-const SIGNAL_SERVER = 'http://localhost:5000';
+const SIGNAL_SERVER = 'http://18.204.144.126:8084';
 
 function Room({ roomId }) {
   const [participants, setParticipants] = useState([]);
@@ -16,6 +16,7 @@ function Room({ roomId }) {
   const localVideoRef = useRef();
   const socketRef = useRef();
   const peersRef = useRef({}); // userId -> RTCPeerConnection
+  const signalingQueuesRef = useRef({}); // userId -> Promise queue for signaling
   const userId = useRef(uuidv4());
   const localStream = useRef();
   const screenStream = useRef();
@@ -23,10 +24,12 @@ function Room({ roomId }) {
   useEffect(() => {
     socketRef.current = io(SIGNAL_SERVER);
     socketRef.current.emit('join', { roomId, userId: userId.current });
+    alert(`You joined room: ${roomId} as user: ${userId.current}`);
     socketRef.current.on('participants', (list) => {
       setParticipants(list);
       // Create peer connections to all existing participants (except self)
       list.forEach(existingId => {
+        alert(`Existing participant: ${existingId}`);
         if (existingId !== userId.current && !peersRef.current[existingId]) {
           const peer = createPeer(existingId, true);
           peersRef.current[existingId] = peer;
@@ -101,8 +104,12 @@ function Room({ roomId }) {
       }
     };
     if (initiator) {
-      peer.createOffer().then(offer => {
-        peer.setLocalDescription(offer);
+      // Initialize signaling queue for this peer
+      signalingQueuesRef.current[otherUserId] = Promise.resolve();
+      signalingQueuesRef.current[otherUserId] = signalingQueuesRef.current[otherUserId].then(async () => {
+        console.log(`[createPeer] Creating offer for ${otherUserId}`);
+        const offer = await peer.createOffer();
+        await peer.setLocalDescription(offer);
         socketRef.current.emit('signal', { roomId, userId: userId.current, to: otherUserId, signal: { sdp: offer } });
       });
     }
@@ -117,39 +124,47 @@ function Room({ roomId }) {
       peer = createPeer(from, false);
       peersRef.current[from] = peer;
     }
-    try {
-      if (signal.sdp) {
-        const desc = new RTCSessionDescription(signal.sdp);
-        const isOffer = desc.type === 'offer';
-        const polite = isPolite(from);
-
-        if (isOffer) {
-          const signalingState = peer.signalingState;
-          if (signalingState !== 'stable') {
-            if (!polite) {
-              // Impolite peer ignores glare offer
-              return;
-            }
-            // Polite peer rolls back and accepts the offer
-            await peer.setLocalDescription({ type: 'rollback' });
-          }
-          await peer.setRemoteDescription(desc);
-          const answer = await peer.createAnswer();
-          await peer.setLocalDescription(answer);
-          socketRef.current.emit('signal', { roomId, userId: userId.current, to: from, signal: { sdp: answer } });
-        } else {
-          await peer.setRemoteDescription(desc);
-        }
-      } else if (signal.candidate) {
-        try {
-          await peer.addIceCandidate(new RTCIceCandidate(signal.candidate));
-        } catch (err) {
-          // Ignore ICE candidate errors
-        }
-      }
-    } catch (err) {
-      // Optionally log or handle error
+    // Initialize signaling queue for this peer if not present
+    if (!signalingQueuesRef.current[from]) {
+      signalingQueuesRef.current[from] = Promise.resolve();
     }
+    // Queue signaling operations to serialize them
+    signalingQueuesRef.current[from] = signalingQueuesRef.current[from].then(async () => {
+      try {
+        if (signal.sdp) {
+          const desc = new RTCSessionDescription(signal.sdp);
+          const isOffer = desc.type === 'offer';
+          const polite = isPolite(from);
+
+          console.log(`[handleSignal] Received ${desc.type} from ${from}, signalingState: ${peer.signalingState}`);
+
+          if (isOffer) {
+            if (peer.signalingState !== 'stable') {
+              if (!polite) {
+                console.log(`[handleSignal] Ignoring glare offer from impolite peer ${from}`);
+                return;
+              }
+              console.log(`[handleSignal] Rolling back for polite peer ${from}`);
+              await peer.setLocalDescription({ type: 'rollback' });
+            }
+            await peer.setRemoteDescription(desc);
+            const answer = await peer.createAnswer();
+            await peer.setLocalDescription(answer);
+            socketRef.current.emit('signal', { roomId, userId: userId.current, to: from, signal: { sdp: answer } });
+          } else {
+            await peer.setRemoteDescription(desc);
+          }
+        } else if (signal.candidate) {
+          try {
+            await peer.addIceCandidate(new RTCIceCandidate(signal.candidate));
+          } catch (err) {
+            // Ignore ICE candidate errors
+          }
+        }
+      } catch (err) {
+        console.error(`[handleSignal] Error handling signal from ${from}:`, err);
+      }
+    });
   };
 
   const toggleMic = () => {
@@ -386,11 +401,15 @@ function Room({ roomId }) {
           peer.addTrack(track, localStream.current);
         }
       });
-      // Renegotiate (create and send new offer)
-      peer.createOffer().then(offer => {
-        peer.setLocalDescription(offer);
-        socketRef.current.emit('signal', { roomId, userId: userId.current, to: peerId, signal: { sdp: offer } });
-      });
+      // Renegotiate (create and send new offer) only if signalingState is stable and no ongoing signaling
+      if (peer.signalingState === 'stable' && (!signalingQueuesRef.current[peerId] || signalingQueuesRef.current[peerId] === Promise.resolve())) {
+        signalingQueuesRef.current[peerId] = (async () => {
+          console.log(`[renegotiation] Creating offer for ${peerId}`);
+          const offer = await peer.createOffer();
+          await peer.setLocalDescription(offer);
+          socketRef.current.emit('signal', { roomId, userId: userId.current, to: peerId, signal: { sdp: offer } });
+        })();
+      }
     });
   }, [localStream.current]);
 
